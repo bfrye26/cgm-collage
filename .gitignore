@@ -1,0 +1,30 @@
+# Build output
+bin/
+obj/
+*.exe
+*.pdb
+*.user
+*.suo
+.vs/
+
+# Go
+*.test
+
+# Project/user-generated data
+*.cgmcollage
+exports/
+autosave/
+.tools/
+artifacts/
+TestResults/
+
+# Historical handoff material retained locally
+current-native-go/
+web-reference-v1.0/
+BUILD_CURRENT_GO_VERSION.md
+DESKTOP_APP_HANDOFF.md
+KNOWN_ISSUES.md
+SHA256SUMS.txt
+START_HERE.md
+WPF_REWRITE_PLAN.md
+reference-images/native-preview*.png
