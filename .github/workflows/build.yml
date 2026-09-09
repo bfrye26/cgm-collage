@@ -7,6 +7,14 @@ on:
 jobs:
   windows:
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runtime: win-x64
+            architecture: x64
+          - runtime: win-arm64
+            architecture: arm64
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v6
@@ -16,8 +24,8 @@ jobs:
         run: choco install innosetup --no-progress -y
       - name: Build
         shell: pwsh
-        run: ./build.ps1
+        run: ./build.ps1 -RuntimeIdentifier ${{ matrix.runtime }}
       - uses: actions/upload-artifact@v7
         with:
-          name: CGM-Collage-Windows
-          path: artifacts/CGM-Collage-Setup.exe
+          name: CGM-Collage-Windows-${{ matrix.architecture }}
+          path: artifacts/CGM-Collage-Setup-${{ matrix.architecture }}.exe

@@ -1,5 +1,15 @@
 #define AppName "CGM Collage"
-#define AppVersion "3.0.2"
+#ifndef RuntimeIdentifier
+#define RuntimeIdentifier "win-x64"
+#endif
+#ifndef AppArchitecture
+#define AppArchitecture "x64"
+#endif
+#ifndef ArchitectureExpression
+#define ArchitectureExpression "x64compatible and not arm64"
+#endif
+
+#define AppVersion "3.0.3"
 #define AppPublisher "CGM"
 #define AppExeName "CGM Collage.exe"
 
@@ -12,10 +22,10 @@ DefaultDirName={localappdata}\Programs\CGM Collage
 DefaultGroupName=CGM Collage
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
-ArchitecturesAllowed=x64compatible
-ArchitecturesInstallIn64BitMode=x64compatible
+ArchitecturesAllowed={#ArchitectureExpression}
+ArchitecturesInstallIn64BitMode={#ArchitectureExpression}
 OutputDir=..\artifacts
-OutputBaseFilename=CGM-Collage-Setup
+OutputBaseFilename=CGM-Collage-Setup-{#AppArchitecture}
 SetupIconFile=..\src\CGMCollage\Assets\app.ico
 UninstallDisplayIcon={app}\{#AppExeName}
 Compression=lzma2/ultra64
@@ -35,7 +45,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Shortcuts:"; Flags: unchecked
 
 [Files]
-Source: "..\artifacts\publish\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\artifacts\publish\{#RuntimeIdentifier}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{autoprograms}\CGM Collage"; Filename: "{app}\{#AppExeName}"

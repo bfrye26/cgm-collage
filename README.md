@@ -12,21 +12,22 @@ CGM Collage is a native Windows editor for building editorial headers, feature i
 - Brightness, contrast, saturation, opacity, borders, and shadows
 - JPEG, PNG, and WebP export at common editorial and social sizes
 - Undo/redo, autosave recovery, embedded images, and `.cgmcollage` project files
-- Self-contained 64-bit Windows installer; no separate .NET or browser runtime required
+- Native, self-contained Windows installers for x64 and ARM64; no separate .NET or browser runtime required
 
 ## Install
 
-Download `CGM-Collage-Setup.exe` from the latest GitHub release and run it. Installation is per user and does not require administrator access.
+Download `CGM-Collage-Setup-x64.exe` for Intel/AMD computers or `CGM-Collage-Setup-arm64.exe` for ARM-based Windows computers from the latest GitHub release. Installation is per user and does not require administrator access.
 
 ## Build
 
 Install the .NET 10 SDK and Inno Setup, then run:
 
 ```powershell
-./build.ps1
+./build.ps1 -RuntimeIdentifier win-x64
+./build.ps1 -RuntimeIdentifier win-arm64
 ```
 
-The self-contained application and installer are written to `artifacts/`.
+The self-contained applications and architecture-specific installers are written to `artifacts/`.
 
 ## Keyboard and mouse
 
