@@ -21,6 +21,7 @@ public static class Renderer
   if(f.Image is not null){try{using var bitmap=SKBitmap.Decode(Convert.FromBase64String(f.Image.Data));if(bitmap is not null)DrawBitmap(c,bitmap,f,bounds);}catch{DrawEmpty(c,bounds,"Image unavailable");}}
   else DrawEmpty(c,bounds,$"{p.Frames.IndexOf(f)+1}\nDrop image");
   c.Restore();
+  if(p.Gap>0){using var gap=new SKPaint{Color=Parse(p.GapColor),Style=SKPaintStyle.Stroke,StrokeWidth=(float)p.Gap,IsAntialias=true};c.DrawPath(path,gap);}
   using var edge=new SKPaint{Color=selected?new SKColor(245,27,87):new SKColor(185,194,207,150),Style=SKPaintStyle.Stroke,StrokeWidth=selected?3:1.2f,IsAntialias=true};c.DrawPath(path,edge);
   if(f.BorderWidth>0){using var border=new SKPaint{Color=Parse(f.BorderColor),Style=SKPaintStyle.Stroke,StrokeWidth=(float)f.BorderWidth,IsAntialias=true};c.DrawPath(path,border);}
  }
