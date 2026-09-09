@@ -1,5 +1,5 @@
 #define AppName "CGM Collage"
-#define AppVersion "3.0.1"
+#define AppVersion "3.0.2"
 #define AppPublisher "CGM"
 #define AppExeName "CGM Collage.exe"
 
