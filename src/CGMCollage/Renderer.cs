@@ -18,9 +18,24 @@ public static class Renderer
  {
   float left=(float)(f.X*p.CanvasWidth),top=(float)(f.Y*p.CanvasHeight),right=(float)((f.X+f.W)*p.CanvasWidth),bottom=(float)((f.Y+f.H)*p.CanvasHeight);
   using var outline=new SKPaint{Color=new SKColor(245,27,87),Style=SKPaintStyle.Stroke,StrokeWidth=size/6,IsAntialias=true,PathEffect=SKPathEffect.CreateDash([size,size/2],0)};
-  c.DrawRect(new SKRect(left,top,right,bottom),outline);
+  if(f.Shape=="poly"){using var path=Path(p,f);c.DrawPath(path,outline);}else c.DrawRect(new SKRect(left,top,right,bottom),outline);
   using var fill=new SKPaint{Color=SKColors.White,IsAntialias=true};
   using var edge=new SKPaint{Color=new SKColor(245,27,87),Style=SKPaintStyle.Stroke,StrokeWidth=size/5,IsAntialias=true};
+  if(f.Shape=="poly"&&f.Points.Count>2)
+  {
+   foreach(var index in Enumerable.Range(0,f.Points.Count))
+   {
+    var a=f.Points[index];var b=f.Points[(index+1)%f.Points.Count];
+    bool outer=(Math.Abs(a.X-b.X)<1e-8&&(a.X<1e-8||a.X>1-1e-8))||(Math.Abs(a.Y-b.Y)<1e-8&&(a.Y<1e-8||a.Y>1-1e-8));
+    if(outer)continue;
+    foreach(var point in new[]{a,new PointD((a.X+b.X)/2,(a.Y+b.Y)/2),b})
+    {
+     float x=(float)(point.X*p.CanvasWidth),y=(float)(point.Y*p.CanvasHeight);
+     var rect=new SKRect(x-size/2,y-size/2,x+size/2,y+size/2);c.DrawRect(rect,fill);c.DrawRect(rect,edge);
+    }
+   }
+   return;
+  }
   foreach(var point in new[]{new SKPoint(left,top),new SKPoint((left+right)/2,top),new SKPoint(right,top),new SKPoint(left,(top+bottom)/2),new SKPoint(right,(top+bottom)/2),new SKPoint(left,bottom),new SKPoint((left+right)/2,bottom),new SKPoint(right,bottom)})
   {
    bool movableX=(Math.Abs(point.X-left)<.01&&left>.01)||(Math.Abs(point.X-right)<.01&&right<p.CanvasWidth-.01);

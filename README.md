@@ -25,7 +25,7 @@ Use **Add images.** to import several files at once. Existing images stay in pla
 
 Drag an image between panels to swap placement. Crop, zoom, rotation, flips, fit mode, opacity, and colour adjustments travel with the image; panel shape and borders stay in place. Hold **Shift** while starting a drag, or enable **Pan image**, to adjust the crop. Double-click a panel to choose an image. **+ Add panel**, **Duplicate panel**, and **Delete panel** provide quick layout changes. All these edits support undo and redo.
 
-Select a frame, then drag an internal side or corner handle to move the shared divider. The panels on both sides resize together, keeping the grid filled without gaps or overlaps. Outer canvas edges stay fixed, and dividers stop before neighbouring panels collapse. This also works on empty panels, uneven grids, and angled layouts. The layout becomes **Custom**; changing the image count or applying a layout arranges the panels again. Press **Escape** during a resize to restore every affected panel, or undo after releasing the mouse.
+Select a frame, then drag an internal side or corner handle to move the shared divider. The panels on both sides resize together, keeping the grid filled without gaps or overlaps. Outer canvas edges stay fixed, and dividers stop before neighbouring panels collapse. This also works on empty panels and uneven grids. Angled dividers slide parallel to themselves, preserving their angle; their handles sit on the actual slanted edges. The layout becomes **Custom**; changing the image count or applying a layout arranges the panels again. Press **Escape** during a resize to restore every affected panel, or undo after releasing the mouse.
 
 ## Install the application
 

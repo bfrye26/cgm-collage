@@ -104,8 +104,32 @@ public static class CollageTests
    {
     FrameResize.ApplyConnected(frames,snapshot,frames.Count/2,edges,delta,delta);
     CheckCoverage(frames,$"{name} {count} {edges} {delta}");
+    for(int index=0;index<frames.Count;index++)
+    {
+     var before=snapshot[index];var after=frames[index];
+     if(before.Shape!="poly")continue;
+     Check(before.Points.Count==after.Points.Count,"Resize added bends to an angled side");
+     for(int side=0;side<before.Points.Count;side++)
+     {
+      var a=before.Points[side];var b=before.Points[(side+1)%before.Points.Count];
+      var c=after.Points[side];var d=after.Points[(side+1)%after.Points.Count];
+      Check(Math.Abs((b.X-a.X)*(d.Y-c.Y)-(b.Y-a.Y)*(d.X-c.X))<1e-8,$"Divider angle changed: {name}");
+     }
+    }
    }
   }
+  double slant=Math.Tan(40*Math.PI/180)*675/1200;
+  var forty=new List<Frame>
+  {
+   new(){Shape="poly",X=0,Y=0,W=.25+slant,H=1,Points=[new(0,0),new(.25,0),new(.25+slant,1),new(0,1)]},
+   new(){Shape="poly",X=.25,Y=0,W=.75,H=1,Points=[new(.25,0),new(1,0),new(1,1),new(.25+slant,1)]}
+  };
+  var fortySnapshot=forty.Select(f=>f.Clone()).ToList();
+  FrameResize.ApplyConnected(forty,fortySnapshot,0,ResizeEdges.Right,.08,0);
+  var top=forty[0].Points[1];var bottom=forty[0].Points[2];
+  double angle=Math.Atan2((bottom.X-top.X)*1200,(bottom.Y-top.Y)*675)*180/Math.PI;
+  Check(Math.Abs(angle-40)<1e-8&&Math.Abs(top.X-.33)<1e-8&&Math.Abs(bottom.X-(.33+slant))<1e-8,"40-degree side did not translate parallel");
+  CheckCoverage(forty,"40-degree divider");
   p=new Project();p.SetPanelCount(4);originals=p.Frames.Select(f=>f.Clone()).ToList();
   FrameResize.ApplyConnected(p.Frames,originals,0,ResizeEdges.Right|ResizeEdges.Bottom,.13,.17);
   Check(Math.Abs(p.Frames[1].X-.63)<1e-10&&Math.Abs(p.Frames[2].Y-.67)<1e-10,"Grid corner did not move neighbours");

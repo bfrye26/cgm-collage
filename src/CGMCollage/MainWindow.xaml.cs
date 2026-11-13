@@ -182,6 +182,24 @@ public partial class MainWindow : Window
  ResizeEdges ResizeHit(Point p)
  {
   if(Selected is not {Hidden:false,Locked:false} f)return ResizeEdges.None;
+  if(f.Shape=="poly"&&f.Points.Count>2)
+  {
+   var pointer=Canvas.PointToScreen(p);ResizeEdges found=ResizeEdges.None;
+   for(int i=0;i<f.Points.Count;i++)
+   {
+    var first=f.Points[i];var last=f.Points[(i+1)%f.Points.Count];
+    bool outer=(Math.Abs(first.X-last.X)<1e-8&&(first.X<1e-8||first.X>1-1e-8))||(Math.Abs(first.Y-last.Y)<1e-8&&(first.Y<1e-8||first.Y>1-1e-8));
+    if(outer)continue;
+    var aPoint=Canvas.PointToScreen(new Point(first.X*Canvas.ActualWidth,first.Y*Canvas.ActualHeight));
+    var bPoint=Canvas.PointToScreen(new Point(last.X*Canvas.ActualWidth,last.Y*Canvas.ActualHeight));
+    var vector=bPoint-aPoint;double length=vector.LengthSquared;if(length<1e-10)continue;
+    double t=Math.Clamp(Vector.Multiply(pointer-aPoint,vector)/length,0,1);
+    if((pointer-(aPoint+vector*t)).Length>7)continue;
+    if(Math.Abs(last.Y-first.Y)>Math.Abs(last.X-first.X))found|=(first.X+last.X)/2<f.X+f.W/2?ResizeEdges.Left:ResizeEdges.Right;
+    else found|=(first.Y+last.Y)/2<f.Y+f.H/2?ResizeEdges.Top:ResizeEdges.Bottom;
+   }
+   return found;
+  }
   var a=Canvas.PointToScreen(new Point(f.X*Canvas.ActualWidth,f.Y*Canvas.ActualHeight));
   var b=Canvas.PointToScreen(new Point((f.X+f.W)*Canvas.ActualWidth,(f.Y+f.H)*Canvas.ActualHeight));var point=Canvas.PointToScreen(p);
   const double tolerance=7;
