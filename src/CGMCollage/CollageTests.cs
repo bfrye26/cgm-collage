@@ -5,6 +5,36 @@ public static class CollageTests
 {
  static void Check(bool condition,string message){if(!condition)throw new Exception(message);}
  static EmbeddedImage Image(string name)=>new(name,"image/png","test-data");
+ static void CheckCoverage(List<Frame> frames,string label)
+ {
+  Check(frames.All(f=>f.X>=-1e-8&&f.Y>=-1e-8&&f.X+f.W<=1+1e-8&&f.Y+f.H<=1+1e-8&&f.W>0&&f.H>0),$"Resize invalid bounds: {label}");
+  double area=0;
+  foreach(var frame in frames)
+  {
+   if(frame.Shape!="poly")area+=frame.W*frame.H;
+   else
+   {
+    double sum=0;for(int i=0;i<frame.Points.Count;i++){var a=frame.Points[i];var b=frame.Points[(i+1)%frame.Points.Count];sum+=a.X*b.Y-b.X*a.Y;}
+    area+=Math.Abs(sum)/2;
+   }
+  }
+  Check(Math.Abs(area-1)<1e-8,$"Resize left uncovered area: {label}");
+  for(int row=0;row<17;row++)for(int column=0;column<23;column++)
+  {
+   double x=(column+.371)/23,y=(row+.293)/17;
+   int covering=frames.Count(f=>Contains(f,x,y));
+   Check(covering==1,$"Resize produced a gap or overlap at {x},{y}: {label}");
+  }
+ }
+ static bool Contains(Frame frame,double x,double y)
+ {
+  if(x<frame.X||x>frame.X+frame.W||y<frame.Y||y>frame.Y+frame.H)return false;
+  if(frame.Shape!="poly")return true;
+  bool inside=false;var points=frame.Points;
+  for(int i=0,j=points.Count-1;i<points.Count;j=i++)
+   if((points[i].Y>y)!=(points[j].Y>y)&&x<(points[j].X-points[i].X)*(y-points[i].Y)/(points[j].Y-points[i].Y)+points[i].X)inside=!inside;
+  return inside;
+ }
  public static void Run()
  {
   foreach(string layout in Templates.FlexibleNames)
@@ -55,29 +85,37 @@ public static class CollageTests
   PanelPlacement.Place(p,new[]{second},63);Check(p.Frames[63].Image==second,"Replacement at limit failed");
   history.Reset(p);p.SetPanelCount(1);history.Push(p);
   Check(history.Undo().Frames.Count==64&&history.Redo().Frames.Count==1,"Undo/redo count failed");
-  var original=new Frame{X=.2,Y=.2,W=.5,H=.5,Image=first,CropX=.4,Zoom=1.6};
-  var resized=original.Clone();
-  FrameResize.Apply(resized,original,ResizeEdges.Right,.1,0);
-  Check(Math.Abs(resized.W-.6)<1e-10&&resized.X==.2&&resized.H==.5,"Right edge resize failed");
-  FrameResize.Apply(resized,original,ResizeEdges.Left|ResizeEdges.Top,.1,-.1);
-  Check(Math.Abs(resized.X-.3)<1e-10&&Math.Abs(resized.Y-.1)<1e-10&&Math.Abs(resized.W-.4)<1e-10&&Math.Abs(resized.H-.6)<1e-10,"Corner resize failed");
-  FrameResize.Apply(resized,original,ResizeEdges.Right|ResizeEdges.Bottom,10,10);
-  Check(Math.Abs(resized.X+resized.W-1)<1e-10&&Math.Abs(resized.Y+resized.H-1)<1e-10,"Resize escaped canvas");
-  FrameResize.Apply(resized,original,ResizeEdges.Left|ResizeEdges.Top,10,10);
-  Check(resized.W>=.019999&&resized.H>=.019999,"Resize crossed opposite edge");
-  Check(resized.Image==first&&resized.CropX==.4&&resized.Zoom==1.6,"Resize changed image edits");
-  var polygon=Templates.Create("Angled Triptych")[0];var polygonCopy=polygon.Clone();
-  FrameResize.Apply(polygon,polygonCopy,ResizeEdges.Right,.1,0);
-  Check(Math.Abs(polygon.Points.Max(q=>q.X)-(polygon.X+polygon.W))<1e-10&&polygonCopy.Points.Max(q=>q.X)!=polygon.Points.Max(q=>q.X),"Polygon resize failed");
-  double previousHeight=resized.H;
-  p=new Project{Frames=[resized],Template="Custom"};history.Reset(p);
-  FrameResize.Apply(p.Frames[0],resized.Clone(),ResizeEdges.Bottom,0,.05);history.Push(p);
-  Check(history.Undo().Frames[0].H==previousHeight,"Resize undo failed");
+  p=new Project();p.ApplyTemplate("Two Panel");
+  p.Frames[0].Image=first;p.Frames[0].CropX=.4;p.Frames[0].Zoom=1.6;
+  var originals=p.Frames.Select(f=>f.Clone()).ToList();history.Reset(p);
+  FrameResize.ApplyConnected(p.Frames,originals,0,ResizeEdges.Right,.1,0);
+  Check(Math.Abs(p.Frames[0].W-.6)<1e-10&&Math.Abs(p.Frames[1].X-.6)<1e-10&&Math.Abs(p.Frames[1].W-.4)<1e-10,"Shared divider did not resize both panels");
+  Check(p.Frames[0].Image==first&&p.Frames[0].CropX==.4&&p.Frames[0].Zoom==1.6,"Resize changed image edits");
+  history.Push(p);Check(history.Undo().Frames[0].W==.5&&Math.Abs(history.Redo().Frames[1].X-.6)<1e-10,"Connected resize undo/redo failed");
+  FrameResize.ApplyConnected(p.Frames,originals,0,ResizeEdges.Left,-.2,0);
+  Check(p.Frames[0].X==0&&p.Frames[0].W==.5,"Outer canvas edge moved");
+  foreach(string name in Templates.Names.Concat(Templates.FlexibleNames))
+  foreach(int count in Templates.IsFlexible(name)?new[]{1,2,3,5,7,13,37,64}:new[]{3})
+  {
+   var frames=Templates.IsFlexible(name)?Templates.CreateFlexible(name,count):Templates.Create(name);
+   var snapshot=frames.Select(f=>f.Clone()).ToList();
+   foreach(var edges in new[]{ResizeEdges.Left,ResizeEdges.Right,ResizeEdges.Top,ResizeEdges.Bottom,ResizeEdges.Right|ResizeEdges.Bottom})
+   foreach(double delta in new[]{-.9,-.11,.13,.9,0})
+   {
+    FrameResize.ApplyConnected(frames,snapshot,frames.Count/2,edges,delta,delta);
+    CheckCoverage(frames,$"{name} {count} {edges} {delta}");
+   }
+  }
+  p=new Project();p.SetPanelCount(4);originals=p.Frames.Select(f=>f.Clone()).ToList();
+  FrameResize.ApplyConnected(p.Frames,originals,0,ResizeEdges.Right|ResizeEdges.Bottom,.13,.17);
+  Check(Math.Abs(p.Frames[1].X-.63)<1e-10&&Math.Abs(p.Frames[2].Y-.67)<1e-10,"Grid corner did not move neighbours");
+  CheckCoverage(p.Frames,"Grid corner");p.Template="Custom";
+  p.Frames[0].Image=first;p.Frames[0].CropX=.4;
   string path=System.IO.Path.Combine(System.IO.Path.GetTempPath(),$"cgm-resize-{Guid.NewGuid():N}.cgmcollage");
   try
   {
    ProjectIO.Save(path,p);var loaded=ProjectIO.Load(path);
-   Check(loaded.Template=="Custom"&&loaded.Frames.Count==1&&loaded.Frames[0].W==p.Frames[0].W&&loaded.Frames[0].H==p.Frames[0].H,"Saved resize was not restored");
+   Check(loaded.Template=="Custom"&&loaded.Frames.Count==4&&loaded.Frames[0].W==p.Frames[0].W&&loaded.Frames[0].H==p.Frames[0].H,"Saved resize was not restored");
    Check(loaded.Frames[0].Image==first&&loaded.Frames[0].CropX==.4,"Saved resize lost image edits");
    p.SetPanelCount(37);ProjectIO.Save(path,p);loaded=ProjectIO.Load(path);
    Check(loaded.Frames.Count==37&&loaded.Template=="Auto Grid","Flexible layout save/load failed");

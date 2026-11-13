@@ -13,7 +13,7 @@ public partial class MainWindow : Window
 {
  Project project=new();readonly History history=new();int selected,dragTarget=-1;bool syncing=true,dirty,dragging,panning; const string PanelDragFormat="CGMCollage.Panel";Point dragStart;double dragCropX,dragCropY;string? currentPath;readonly DispatcherTimer autosave=new(){Interval=TimeSpan.FromSeconds(25)};
  Frame? Selected=>selected>=0&&selected<project.Frames.Count?project.Frames[selected]:null;
- Frame? resizeOriginal;ResizeEdges resizeEdges;string? resizeTemplate;
+ List<Frame>? resizeOriginals;ResizeEdges resizeEdges;string? resizeTemplate;
  public MainWindow()
  {
   InitializeComponent();BuildTemplates();history.Reset(project);SyncUi();KeyDown+=OnKeyDown;Closing+=OnClosing;autosave.Tick+=(_,_)=>Autosave();autosave.Start();
@@ -130,7 +130,7 @@ public partial class MainWindow : Window
   Canvas.Focus();var p=e.GetPosition(Canvas);resizeEdges=ResizeHit(p);
   if(resizeEdges!=ResizeEdges.None&&Selected is { } frame)
   {
-   resizeOriginal=frame.Clone();resizeTemplate=project.Template;dragStart=p;dragging=true;panning=false;
+   resizeOriginals=project.Frames.Select(f=>f.Clone()).ToList();resizeTemplate=project.Template;dragStart=p;dragging=true;panning=false;
    Canvas.CaptureMouse();e.Handled=true;return;
   }
   int hit=Hit(p);
@@ -147,9 +147,9 @@ public partial class MainWindow : Window
   if(!dragging){UpdateCursor(ResizeHit(p));return;}
   if(Selected is not { } f)return;
   if(e.LeftButton!=MouseButtonState.Pressed){FinishPan();return;}
-  if(resizeOriginal is not null)
+  if(resizeOriginals is not null)
   {
-   FrameResize.Apply(f,resizeOriginal,resizeEdges,(p.X-dragStart.X)/Math.Max(1,Canvas.ActualWidth),(p.Y-dragStart.Y)/Math.Max(1,Canvas.ActualHeight));
+   FrameResize.ApplyConnected(project.Frames,resizeOriginals,selected,resizeEdges,(p.X-dragStart.X)/Math.Max(1,Canvas.ActualWidth),(p.Y-dragStart.Y)/Math.Max(1,Canvas.ActualHeight));
    StatusText.Text=$"Frame size: {f.W*project.CanvasWidth:0} x {f.H*project.CanvasHeight:0} px";
    Canvas.InvalidateVisual();return;
   }
@@ -167,11 +167,11 @@ public partial class MainWindow : Window
  }
  void FinishPan()
  {
-  if(resizeOriginal is { } original)
+  if(resizeOriginals is { } originals)
   {
-   bool resized=Selected is { } frame&&(Math.Abs(frame.X-original.X)>1e-10||Math.Abs(frame.Y-original.Y)>1e-10||Math.Abs(frame.W-original.W)>1e-10||Math.Abs(frame.H-original.H)>1e-10);
-   resizeOriginal=null;resizeEdges=ResizeEdges.None;dragging=false;panning=false;Canvas.ReleaseMouseCapture();Canvas.Cursor=Cursors.Arrow;
-   if(resized){project.Template="Custom";Changed("Frame resized");}return;
+   bool resized=project.Frames.Where((f,i)=>Math.Abs(f.X-originals[i].X)>1e-10||Math.Abs(f.Y-originals[i].Y)>1e-10||Math.Abs(f.W-originals[i].W)>1e-10||Math.Abs(f.H-originals[i].H)>1e-10).Any();
+   resizeOriginals=null;resizeEdges=ResizeEdges.None;dragging=false;panning=false;Canvas.ReleaseMouseCapture();Canvas.Cursor=Cursors.Arrow;
+   if(resized){project.Template="Custom";Changed("Connected panels resized");}return;
   }
   bool changed=dragging&&panning&&Selected is { } f&&(f.CropX!=dragCropX||f.CropY!=dragCropY);
   dragging=false;panning=false;Canvas.ReleaseMouseCapture();
@@ -189,6 +189,8 @@ public partial class MainWindow : Window
   ResizeEdges edges=ResizeEdges.None;
   if(Math.Abs(point.X-a.X)<=tolerance)edges|=ResizeEdges.Left;else if(Math.Abs(point.X-b.X)<=tolerance)edges|=ResizeEdges.Right;
   if(Math.Abs(point.Y-a.Y)<=tolerance)edges|=ResizeEdges.Top;else if(Math.Abs(point.Y-b.Y)<=tolerance)edges|=ResizeEdges.Bottom;
+  if(f.X<1e-8)edges&=~ResizeEdges.Left;if(f.X+f.W>1-1e-8)edges&=~ResizeEdges.Right;
+  if(f.Y<1e-8)edges&=~ResizeEdges.Top;if(f.Y+f.H>1-1e-8)edges&=~ResizeEdges.Bottom;
   return edges;
  }
  void UpdateCursor(ResizeEdges edges)
@@ -226,7 +228,7 @@ public partial class MainWindow : Window
  void Export_Click(object s,RoutedEventArgs e){var d=new SaveFileDialog{Filter="JPEG image (*.jpg)|*.jpg|PNG image (*.png)|*.png|WebP image (*.webp)|*.webp",DefaultExt=".jpg",FileName=project.Name};if(d.ShowDialog()==true)Export(d.FileName);}
  void QuickExport_Click(object s,RoutedEventArgs e){var dir=currentPath is null?Environment.GetFolderPath(Environment.SpecialFolder.MyPictures):Path.GetDirectoryName(currentPath)!;Export(Path.Combine(dir,$"{project.Name}.jpg"));}
  void Export(string path){try{StatusText.Text="Exporting.";Renderer.Export(project,path);StatusText.Text=$"Exported {Path.GetFileName(path)}";}catch(Exception ex){MessageBox.Show(this,$"The collage could not be exported.\n\n{ex.Message}","Export",MessageBoxButton.OK,MessageBoxImage.Error);}}
- void OnKeyDown(object s,KeyEventArgs e){if(e.Key==Key.Escape&&resizeOriginal is { } original){project.Frames[selected]=original;project.Template=resizeTemplate??project.Template;resizeOriginal=null;resizeEdges=ResizeEdges.None;dragging=false;panning=false;Canvas.ReleaseMouseCapture();Canvas.Cursor=Cursors.Arrow;StatusText.Text="Resize cancelled";SyncUi();Canvas.InvalidateVisual();e.Handled=true;return;}if(dragging)return;if(e.OriginalSource is System.Windows.Controls.Primitives.TextBoxBase)return;if(Keyboard.Modifiers.HasFlag(ModifierKeys.Control)&&e.Key==Key.S){SaveProject(false);e.Handled=true;}else if(Keyboard.Modifiers.HasFlag(ModifierKeys.Control)&&e.Key==Key.Z){Undo_Click(s,e);e.Handled=true;}else if(Keyboard.Modifiers.HasFlag(ModifierKeys.Control)&&e.Key==Key.Y){Redo_Click(s,e);e.Handled=true;}else if((e.Key==Key.Delete||e.Key==Key.Back)&&Selected is { } f&&f.Image is not null){f.Image=null;Changed("Image removed");e.Handled=true;}}
+ void OnKeyDown(object s,KeyEventArgs e){if(e.Key==Key.Escape&&resizeOriginals is { } originals){project.Frames=originals;project.Template=resizeTemplate??project.Template;resizeOriginals=null;resizeEdges=ResizeEdges.None;dragging=false;panning=false;Canvas.ReleaseMouseCapture();Canvas.Cursor=Cursors.Arrow;StatusText.Text="Resize cancelled";SyncUi();Canvas.InvalidateVisual();e.Handled=true;return;}if(dragging)return;if(e.OriginalSource is System.Windows.Controls.Primitives.TextBoxBase)return;if(Keyboard.Modifiers.HasFlag(ModifierKeys.Control)&&e.Key==Key.S){SaveProject(false);e.Handled=true;}else if(Keyboard.Modifiers.HasFlag(ModifierKeys.Control)&&e.Key==Key.Z){Undo_Click(s,e);e.Handled=true;}else if(Keyboard.Modifiers.HasFlag(ModifierKeys.Control)&&e.Key==Key.Y){Redo_Click(s,e);e.Handled=true;}else if((e.Key==Key.Delete||e.Key==Key.Back)&&Selected is { } f&&f.Image is not null){f.Image=null;Changed("Image removed");e.Handled=true;}}
  void Autosave(){if(!dirty)return;try{Directory.CreateDirectory(Path.GetDirectoryName(ProjectIO.AutosavePath)!);ProjectIO.Save(ProjectIO.AutosavePath,project);}catch{}}
  public void CheckRecovery(){if(!File.Exists(ProjectIO.AutosavePath))return;if(MessageBox.Show(this,"CGM Collage found recovered work from an earlier session. Open it?","Recover project",MessageBoxButton.YesNo,MessageBoxImage.Question)==MessageBoxResult.Yes)OpenPath(ProjectIO.AutosavePath);else try{File.Delete(ProjectIO.AutosavePath);}catch{}}
  void OnClosing(object? s,CancelEventArgs e){if(!CanDiscard())e.Cancel=true;else{autosave.Stop();if(!dirty)try{File.Delete(ProjectIO.AutosavePath);}catch{}}}

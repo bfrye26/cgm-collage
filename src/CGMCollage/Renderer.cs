@@ -23,6 +23,9 @@ public static class Renderer
   using var edge=new SKPaint{Color=new SKColor(245,27,87),Style=SKPaintStyle.Stroke,StrokeWidth=size/5,IsAntialias=true};
   foreach(var point in new[]{new SKPoint(left,top),new SKPoint((left+right)/2,top),new SKPoint(right,top),new SKPoint(left,(top+bottom)/2),new SKPoint(right,(top+bottom)/2),new SKPoint(left,bottom),new SKPoint((left+right)/2,bottom),new SKPoint(right,bottom)})
   {
+   bool movableX=(Math.Abs(point.X-left)<.01&&left>.01)||(Math.Abs(point.X-right)<.01&&right<p.CanvasWidth-.01);
+   bool movableY=(Math.Abs(point.Y-top)<.01&&top>.01)||(Math.Abs(point.Y-bottom)<.01&&bottom<p.CanvasHeight-.01);
+   if(!movableX&&!movableY)continue;
    var rect=new SKRect(point.X-size/2,point.Y-size/2,point.X+size/2,point.Y+size/2);c.DrawRect(rect,fill);c.DrawRect(rect,edge);
   }
  }
