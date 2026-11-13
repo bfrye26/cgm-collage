@@ -2,7 +2,7 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType><TargetFramework>net10.0-windows</TargetFramework><UseWPF>true</UseWPF>
     <Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><AssemblyName>CGM Collage</AssemblyName><RootNamespace>CGMCollage</RootNamespace>
-    <Version>3.0.3</Version><ApplicationIcon>Assets\app.ico</ApplicationIcon><ApplicationManifest>app.manifest</ApplicationManifest>
+    <Version>3.1.0</Version><ApplicationIcon>Assets\app.ico</ApplicationIcon><ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup><PackageReference Include="SkiaSharp.Views.WPF" Version="2.88.9"/><Resource Include="Assets\app.ico"/></ItemGroup>
 </Project>

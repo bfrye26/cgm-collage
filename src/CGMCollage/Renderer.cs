@@ -4,14 +4,27 @@ namespace CGMCollage;
 
 public static class Renderer
 {
- public static void Draw(Project p, SKCanvas c, int width, int height, int selected=-1, bool guides=false)
+ public static void Draw(Project p, SKCanvas c, int width, int height, int selected=-1, bool guides=false,float handleSize=10)
  {
   c.Clear(Parse(p.Background)); float sx=width/(float)p.CanvasWidth,sy=height/(float)p.CanvasHeight;
   c.Save();c.Scale(sx,sy);
   for(int i=0;i<p.Frames.Count;i++) DrawFrame(p,c,p.Frames[i],i==selected);
   foreach(var t in p.Texts.Where(t=>!t.Hidden)) DrawText(p,c,t);
   if(guides){using var paint=new SKPaint{Color=new SKColor(255,255,255,115),Style=SKPaintStyle.Stroke,StrokeWidth=1,PathEffect=SKPathEffect.CreateDash([8,7],0)};c.DrawRect(p.CanvasWidth*.05f,p.CanvasHeight*.05f,p.CanvasWidth*.9f,p.CanvasHeight*.9f,paint);}
+  if(selected>=0&&selected<p.Frames.Count&&p.Frames[selected] is {Hidden:false,Locked:false} frame)DrawHandles(p,c,frame,handleSize);
   c.Restore();
+ }
+ static void DrawHandles(Project p,SKCanvas c,Frame f,float size)
+ {
+  float left=(float)(f.X*p.CanvasWidth),top=(float)(f.Y*p.CanvasHeight),right=(float)((f.X+f.W)*p.CanvasWidth),bottom=(float)((f.Y+f.H)*p.CanvasHeight);
+  using var outline=new SKPaint{Color=new SKColor(245,27,87),Style=SKPaintStyle.Stroke,StrokeWidth=size/6,IsAntialias=true,PathEffect=SKPathEffect.CreateDash([size,size/2],0)};
+  c.DrawRect(new SKRect(left,top,right,bottom),outline);
+  using var fill=new SKPaint{Color=SKColors.White,IsAntialias=true};
+  using var edge=new SKPaint{Color=new SKColor(245,27,87),Style=SKPaintStyle.Stroke,StrokeWidth=size/5,IsAntialias=true};
+  foreach(var point in new[]{new SKPoint(left,top),new SKPoint((left+right)/2,top),new SKPoint(right,top),new SKPoint(left,(top+bottom)/2),new SKPoint(right,(top+bottom)/2),new SKPoint(left,bottom),new SKPoint((left+right)/2,bottom),new SKPoint(right,bottom)})
+  {
+   var rect=new SKRect(point.X-size/2,point.Y-size/2,point.X+size/2,point.Y+size/2);c.DrawRect(rect,fill);c.DrawRect(rect,edge);
+  }
  }
  static void DrawFrame(Project p,SKCanvas c,Frame f,bool selected)
  {

@@ -9,7 +9,7 @@
 #define ArchitectureExpression "x64compatible and not arm64"
 #endif
 
-#define AppVersion "3.0.3"
+#define AppVersion "3.1.0"
 #define AppPublisher "CGM"
 #define AppExeName "CGM Collage.exe"
 
